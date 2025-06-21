@@ -1,11 +1,11 @@
+import csv
 import pandas as pd
 from pyserini.search.lucene import LuceneSearcher
-import csv
 
 # === Paths ===
-index_dir = "indexes/my-multilingual-index"
+index_dir = "indexes/tf-idf-clean-index"
 queries_path = "data/test_queries.csv"
-output_path = "results/pyserini-qld.csv"
+output_path = "results/clean-bm25-default.csv"
 
 # === Load Queries ===
 queries_df = pd.read_csv(queries_path)
@@ -13,7 +13,7 @@ queries = queries_df.to_dict("records")  # List of {'QueryId': ..., 'Query': ...
 
 # === Initialize Searcher ===
 searcher = LuceneSearcher(index_dir)
-searcher.set_bm25()
+searcher.set_bm25()  # Set BM25 as the default scoring model
 # searcher.set_qld()
 # searcher.set_rm3()
 # searcher.set_rocchio()

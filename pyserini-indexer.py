@@ -7,24 +7,36 @@ from tqdm import tqdm
 original_path = "data/corpus.jsonl"  # Input corpus file
 input_dir = "data/json_corpus"  # Directory for preprocessed JSONL file
 processed_path = os.path.join(input_dir, "docs.jsonl")  # Output JSONL file
-index_dir = "indexes/my-multilingual-index"  # Lucene index output directory
+# index_dir = "indexes/bm25-clean-index"  # Lucene index output directory
+index_dir = "indexes/tf-idf-clean-index"  # Lucene index output directory
 
-# === Step 1: Preprocess the corpus ===
-print("[INFO] Preprocessing corpus...")
-os.makedirs(input_dir, exist_ok=True)
+if not os.path.exists(processed_path):
+    # === Step 1: Preprocess the corpus ===
+    print("[INFO] Preprocessing corpus...")
+    os.makedirs(input_dir, exist_ok=True)
 
-total_lines = 4641784
+    total_lines = 4641784
 
-# Process and convert each document
-with open(original_path, "r") as f_in, open(processed_path, "w") as f_out:
-    for line in tqdm(f_in, total=total_lines, desc="[INFO] Processing documents"):
-        doc = json.loads(line)
-        contents = f"{doc.get('title', '')}. {doc.get('text', '')}"
-        if "keywords" in doc:
-            contents += " " + " ".join(doc["keywords"])
-        f_out.write(json.dumps({"id": doc["id"], "contents": contents}) + "\n")
+    def clean_text(text):
+        """Basic text cleaning function."""
+        # Remove extra whitespace
+        text = " ".join(text.split())
+        # Convert to lowercase
+        text = text.lower()
+        # Remove special characters (keep alphanumeric and spaces)
+        text = "".join(char for char in text if char.isalnum() or char.isspace())
+        return text
 
-print(f"[INFO] Preprocessed corpus saved to: {processed_path}")
+    # Process and convert each document
+    with open(original_path, "r") as f_in, open(processed_path, "w") as f_out:
+        for line in tqdm(f_in, total=total_lines, desc="[INFO] Processing documents"):
+            doc = json.loads(line)
+            contents = clean_text(f"{doc.get('title', '')}. {doc.get('text', '')}")
+            if "keywords" in doc:
+                contents += " " + " ".join(map(clean_text, doc["keywords"]))
+            f_out.write(json.dumps({"id": doc["id"], "contents": contents}) + "\n")
+
+    print(f"[INFO] Preprocessed corpus saved to: {processed_path}")
 
 # === Step 2: Build the BM25 index using Pyserini (Lucene backend) ===
 print("[INFO] Building BM25 index...")
@@ -42,7 +54,7 @@ cmd = [
     "--generator",
     "DefaultLuceneDocumentGenerator",
     "--threads",
-    "4",
+    "8",
     "--storePositions",
     "--storeDocvectors",
     "--storeRaw",
